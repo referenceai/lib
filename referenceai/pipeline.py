@@ -11,8 +11,12 @@ class Pipeline():
         # and make sure that something in the pipeline
         # is ready to supply it
         
-        inputs = fn.__annotations__
-        outputs = fn.__annotations__['return']
+        inputs = fn.__annotations__.copy()
+        outputs = None
+
+        if 'return' in inputs:
+            outputs = inputs['return']
+
         if 'return' in inputs:
             del inputs['return']
 
@@ -48,7 +52,7 @@ class Pipeline():
                 rtn = self.fns[0](*args) # first function takes in the inputs to the run function
             else:
                 # find all of providers
-                inputs = fn.__annotations__
+                inputs = fn.__annotations__.copy()
                 if 'return' in inputs:
                     del inputs['return']
                 rtn = self.fns[i](*self.__find_providers(inputs))
