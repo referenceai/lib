@@ -1,8 +1,14 @@
+import pickle
+from os import path, makedirs
+
 class Pipeline():
 
     provided_types = []
     fns = []
     providers = {}
+
+    def __init__(self):
+        makedirs(path.join(".rai/cache"))
 
     def push(self, fn):
         # transform must be a function
@@ -47,29 +53,78 @@ class Pipeline():
         for _, arg_type in signatures.items():
             assert(type(args[i]) == arg_type)
 
-    # TODO: Add caching to each of the classes that are returned by the functions
+    # TODO: Deal with code change detection using some hashing mechanism
     def run(self, *args):
         i: int = 0
         for fn in self.fns:
             rtn = None
             if i == 0:
                 fn_inputs_signature = fn.__annotations__.copy()
+                fn_outputs_signature = None
                 if 'return' in fn_inputs_signature:
+                    fn_outputs_signature = fn.__annotations__['return']
                     del fn_inputs_signature['return']
                 
                 self.__args_signatures_valid(args,fn_inputs_signature)
 
-                rtn = self.fns[0](*args) # first function takes in the inputs to the run function
+                # start of caching code
+                iscached = True
+                if type(fn_outputs_signature) == tuple:
+                    iscached = True
+                    for t in fn_outputs_signature:
+                        iscached = iscached and path.exists(".rai/cache/" + str(type(t))) and path.isfile(".rai/cache/" + str(type(t)))
+                else: 
+                    iscached = path.exists(".rai/cache/" + str(type(fn_outputs_signature))) and path.isfile(".rai/cache/" + str(type(t)))
+                
+                if iscached:
+                    if type(fn_outputs_signature) == tuple:
+                        rtns = []
+                        for t in fn_outputs_signature:
+                            rtns.append(pickle.load(".rai/cache/" + str(type(t)), "rb"))
+                        rtn = tuple(rtns)
+                    else: 
+                        rtn = pickle.load(".rai/cache/" + str(type(fn_outputs_signature)), "rb")
+                else: 
+                    # end of caching codes
+                    rtn = self.fns[0](*args) # first function takes in the inputs to the run function
             else:
                 # find all of providers
                 inputs = fn.__annotations__.copy()
+                outputs = None
                 if 'return' in inputs:
+                    outputs = fn.__annotations__['return']
                     del inputs['return']
-                rtn = self.fns[i](*self.__find_providers(inputs))
+
+                # start of caching code
+                iscached = True
+                if type(outputs) == tuple:
+                    iscached = True
+                    for t in outputs:
+                        iscached = iscached and path.exists(".rai/cache/" + type(t)) and path.isfile(".rai/cache/" + type(t))
+                else: 
+                    iscached = path.exists(".rai/cache/" + type(outputs)) and path.isfile(".rai/cache/" + type(t))
+                
+                if iscached:
+                    if type(outputs) == tuple:
+                        rtns = []
+                        for t in outputs:
+                            rtns.append(pickle.load(".rai/cache/" + type(t), "rb"))
+                        rtn = tuple(rtns)
+                    else: 
+                        rtn = pickle.load(".rai/cache/" + type(outputs), "rb")
+                else: 
+                    # end of caching codes                
+                    rtn = self.fns[i](*self.__find_providers(inputs))
+
             if type(rtn) is tuple:
                 for r in rtn:
                     self.providers[type(r)] = r
+                    if not iscached:
+                        pickle.dump(r, open(".rai/cache/" + str(type(r))))
             else:
                 self.providers[type(rtn)] = rtn
+                if not iscached:
+                    print(".rai/cache/" + str(type(rtn)))
+                    pickle.dump(rtn, open(".rai/cache/" + str(type(rtn))))
             i += 1
         return rtn
