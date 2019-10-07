@@ -35,20 +35,30 @@ class Pipeline():
         else:
             self.provided_types.append(outputs)
 
-    def __find_providers(self,inputs):
+    def __find_providers(self, inputs):
         fn_providers = []
         for _, input in inputs.items():
             fn_providers.append(self.providers[input])
         return fn_providers 
 
+    def __args_signatures_valid(self, args, signatures):
+        assert(len(args) == len(signatures))
+        i : int = 0
+        for _, arg_type in signatures.items():
+            assert(type(args[i]) == arg_type)
+
+    # TODO: Add caching to each of the classes that are returned by the functions
     def run(self, *args):
         i: int = 0
         for fn in self.fns:
             rtn = None
             if i == 0:
-                # TODO: must check that all args corresponds with the types in function call
-                #       although perhaps it is a non-issue considering that this is taking
-                #       place at runtime, and if they differ it will definitely fail
+                fn_inputs_signature = fn.__annotations__.copy()
+                if 'return' in fn_inputs_signature:
+                    del fn_inputs_signature['return']
+                
+                self.__args_signatures_valid(args,fn_inputs_signature)
+
                 rtn = self.fns[0](*args) # first function takes in the inputs to the run function
             else:
                 # find all of providers
