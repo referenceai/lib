@@ -9,7 +9,7 @@ def string_provider() -> str:
 
 def int_string_consumer(i: int, s: str) -> str:
     h_str : str = ""
-    for t in range(i):
+    for _ in range(i):
         h_str += s
     return h_str
 

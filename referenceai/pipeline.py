@@ -19,7 +19,7 @@ class Pipeline():
         # check inputs
         if len(self.fns) > 0:
             isprovided = True
-            for type_name, t in inputs.items():
+            for _, t in inputs.items():
                 isprovided = isprovided and t in self.provided_types
             assert(isprovided)
 
@@ -33,7 +33,7 @@ class Pipeline():
 
     def __find_providers(self,inputs):
         fn_providers = []
-        for input_name, input in inputs.items():
+        for _, input in inputs.items():
             fn_providers.append(self.providers[input])
         return fn_providers 
 
