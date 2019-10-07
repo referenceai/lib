@@ -59,24 +59,3 @@ class Pipeline():
                 self.providers[type(rtn)] = rtn
             i += 1
         return rtn
-
-
-def int_provider(i: int) -> int:
-    return i
-
-def string_provider() -> str:
-    return "hello world\n"
-
-def int_string_consumer(i: int, s: str) -> str:
-    h_str : str = ""
-    for t in range(i):
-        h_str += s
-    return h_str
-
-#p = Pipeline()
-#
-#p.push(int_provider)
-#p.push(string_provider)
-#p.push(int_string_consumer)
-#
-#print(p.run(3))
