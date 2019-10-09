@@ -6,11 +6,6 @@ from loguru import logger
 
 class Pipeline():
 
-    provided_types = []
-    fns = []
-    providers = {}
-    id = None
-
     base_path = None
 
     def __init__(self, id, base_path = None):
@@ -21,6 +16,10 @@ class Pipeline():
         if not path.exists(self.base_path):
             makedirs(self.base_path)
             logger.debug("Create base path at " + str(base_path))
+        # Instance variables intialization
+        self.provided_types = []
+        self.fns = []
+        self.providers = {}
     
     @logger.catch
     def expunge_cache(self):
@@ -72,6 +71,7 @@ class Pipeline():
         i : int = 0
         for _, arg_type in signatures.items():
             assert(type(args[i]) == arg_type)
+            i += 1
     
     def __load_from_cache_or_exec(self, fn_outputs_signature, i, args):
         rtn = None
@@ -133,6 +133,7 @@ class Pipeline():
                 fn_args = self.__find_providers(fn_inputs_signature)
 
             rtn, iscached = self.__load_from_cache_or_exec(fn_outputs_signature, i, fn_args)
+            logger.info("Loaded function " + str(i) + " from cache at " + self.base_path)
 
             if type(rtn) is not tuple:
                 rtn = tuple([rtn])

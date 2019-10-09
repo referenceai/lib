@@ -14,12 +14,18 @@ def int_string_consumer(i: int, s: str) -> str:
         h_str += s
     return h_str
 
+def int_string_provider(i: int, message: str) -> (int, str):
+    return (i,message)
+
+def intermediate_random_provider():
+    print("doing nothing at all")
 
 
 p = Pipeline("test")
 p.push(int_provider)
 p.push(string_provider)
 p.push(int_string_consumer)
+
 
 def test_basic_pipeline():
     i = 4
@@ -37,3 +43,14 @@ def test_expunge_cache():
     p.expunge_cache()
     p.run(3)
     assert (r == test_sentence*3)
+
+
+p2 = Pipeline("something")
+p2.push(int_string_provider)
+p2.push(intermediate_random_provider)
+p2.push(int_string_consumer)
+
+def test_complex_return_types():
+    r = p2.run(4,test_sentence)
+    assert (r == test_sentence*4)
+
