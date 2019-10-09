@@ -99,9 +99,7 @@ class Pipeline():
         
         return rtn, iscached
 
-    # TODO: Deal with code change detection using some hashing mechanism
-    #       First, we must invalidate the cache if the parameter inputs to the start function are different
-    #       Second, we must detect if the code within the function or any classes that it depends on has changed, this is a much more difficult problem
+    # TODO: We must detect if any classes that functions depend on have changed
     def run(self, *args):
         rtn = None
         for i in range(len(self.fns)):
