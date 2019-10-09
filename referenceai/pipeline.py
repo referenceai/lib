@@ -65,6 +65,7 @@ class Pipeline():
         rtn = None
         iscached = True
         base_path = path.join(self.base_path, str(i))
+        wfn = lambda: self.fns[i](*args)
 
         if not path.exists(base_path):
             makedirs(base_path)
@@ -79,15 +80,22 @@ class Pipeline():
             iscached = path.exists(file_path) and path.isfile(file_path)
         
         if iscached:
-            if type(fn_outputs_signature) is not tuple:
-                fn_outputs_signature = tuple([fn_outputs_signature])
-            rtns = []
-            for j in range(len(fn_outputs_signature)):
-                file_path = path.join(base_path, str(j))
-                rtns.append(pickle.load(open(file_path, "rb")))
-            rtn = tuple(rtns)
-        else:
-            rtn = self.fns[i](*args)
+            # verify that the signature of the functions are correct
+            file_hash = open(path.join(base_path,"obj"), "r")
+            hash_value = file_hash.readline()
+            if hash_value == hash(wfn):
+                if type(fn_outputs_signature) is not tuple:
+                    fn_outputs_signature = tuple([fn_outputs_signature])
+                rtns = []
+                for j in range(len(fn_outputs_signature)):
+                    file_path = path.join(base_path, str(j))
+                    rtns.append(pickle.load(open(file_path, "rb")))
+                rtn = tuple(rtns)
+            else:
+                iscached = False
+        
+        if not iscached:
+            rtn = wfn()
         
         return rtn, iscached
 

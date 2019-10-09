@@ -20,6 +20,6 @@ def test_basic_pipeline():
     p.push(string_provider)
     p.push(int_string_consumer)
 
-    i = 3
+    i = 4
 
     assert(p.run(i) == ("hello world.")*i)
