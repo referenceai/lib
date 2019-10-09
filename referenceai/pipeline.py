@@ -4,6 +4,7 @@ from os import path, makedirs
 import shutil
 from loguru import logger
 from abc import abstractmethod
+from typing import Callable
 
 class Pipeline():
 
@@ -157,17 +158,38 @@ class Pipeline():
             rtn = rtn[0]
         return rtn
 
+class HyperParameters:
+    pass
+
+class Optimizer:
+    pass
+
+class DataSource():
+
+    @abstractmethod
+    def load(self, url: str) -> str:
+        pass
+    @abstractmethod
+    def train_set(self):
+        pass
+    @abstractmethod
+    def test_set(self):
+        pass
+
+class ImagesDataSource(DataSource):
+    pass
+
 class PipelineAIProvider():
     @abstractmethod
-    def hyperparameters(self):
+    def hyperparameters(self) -> Callable[HyperParameters]:
         pass
 
     @abstractmethod
-    def optimizer(self):
+    def optimizer(self) -> Callable[[], Optimizer]:
         pass
 
     @abstractmethod
-    def datasource(self):
+    def datasource(self) -> Callable[[], DataSource]:
         pass
 
     @abstractmethod

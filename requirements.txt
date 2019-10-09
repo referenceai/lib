@@ -1,2 +1,5 @@
+Keras==2.3.1
 loguru==0.3.2
 pytest==5.0.1
+six==1.12.0
+tensorflow==1.14.0
