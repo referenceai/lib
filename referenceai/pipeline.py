@@ -1,6 +1,8 @@
 import pickle
 import os
 from os import path, makedirs
+import shutil
+from loguru import logger
 
 class Pipeline():
 
@@ -15,9 +17,17 @@ class Pipeline():
         self.id = id
         if base_path is None:
             self.base_path = path.join(os.getcwd(), ".rai", "cache", self.id)
+            logger.debug("Base path for cache set to " + str(base_path))
         if not path.exists(self.base_path):
             makedirs(self.base_path)
-
+            logger.debug("Create base path at " + str(base_path))
+    
+    @logger.catch
+    def expunge_cache(self):
+        shutil.rmtree(self.base_path)
+        makedirs(self.base_path)
+        
+    @logger.catch
     def push(self, fn):
         # transform must be a function
         assert(callable(fn))
@@ -27,6 +37,8 @@ class Pipeline():
         
         inputs = fn.__annotations__.copy()
         outputs = None
+
+        assert(len(inputs) > 0) # This module will not work without annotations
 
         if 'return' in inputs:
             outputs = inputs['return']
@@ -100,6 +112,7 @@ class Pipeline():
         return rtn, iscached
 
     # TODO: We must detect if any classes that functions depend on have changed
+    @logger.catch
     def run(self, *args):
         rtn = None
         for i in range(len(self.fns)):
