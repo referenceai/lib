@@ -3,6 +3,7 @@ import os
 from os import path, makedirs
 import shutil
 from loguru import logger
+from abc import abstractmethod
 
 class Pipeline():
 
@@ -156,3 +157,85 @@ class Pipeline():
         if len(rtn) == 1:
             rtn = rtn[0]
         return rtn
+
+class PipelineAIProvider():
+    @abstractmethod
+    def hyperparameters(self):
+        pass
+
+    @abstractmethod
+    def optimizer(self):
+        pass
+
+    @abstractmethod
+    def datasource(self):
+        pass
+
+    @abstractmethod
+    def transform(self):
+        pass
+
+    @abstractmethod
+    def train(self):
+        pass
+
+    @abstractmethod
+    def save(self):
+        pass
+
+    @abstractmethod
+    def load(self):
+        pass
+
+
+class PipelineAI(Pipeline):
+
+    def __build_pipeline(self, id: str, fns) -> Pipeline:
+        p = Pipeline(id)
+        map(lambda m: p.push(m), fns)
+        return p
+
+    def __init__(self, provider: PipelineAIProvider):
+        self.provider = provider
+        self.train_pipeline = self.__build_pipeline("train",
+                      [self.provider.hyperparameters(),
+                       self.provider.optimizer(),
+                       self.provider.datasource(),
+                       self.provider.transform(),
+                       self.provider.train(),
+                       self.provider.save()])
+
+        self.classify_pipeline = self.__build_pipeline("classify",
+                      [self.provider.hyperparameters(),
+                       self.provider.load(),
+                       self.provider.classify()])
+
+        self.update_pipeline = self.__build_pipeline("update",
+                      [self.provider.hyperparameters(),
+                       self.provider.optimizer(),
+                       self.provider.datasource(),
+                       self.provider.updatesource(),
+                       self.provider.transform(),
+                       self.provider.train(),
+                       self.provider.save()])
+
+        self.update_bulk_pipeline = self.__build_pipeline("update_bulk",
+                      [self.provider.hyperparameters(),
+                       self.provider.optimizer(),
+                       self.provider.datasource(),
+                       self.provider.updatesource_bulk(),
+                       self.provider.transform(),
+                       self.provider.train(),
+                       self.provider.save()])
+
+    def train(self):
+        return self.train_pipeline.run()
+
+    def classify(self, obj):
+        return self.classify_pipeline.run()
+
+    def update(self, obj):
+        return self.update_pipeline.run()
+
+    def update_bulk(self, objs):
+        return self.update_bulk_pipeline.run()
