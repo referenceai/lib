@@ -116,6 +116,9 @@ class Pipeline():
     @logger.catch
     def run(self, *args):
         rtn = None
+        # add all arguments to provider
+        for arg in args:
+            self.providers[type(arg)] = arg
         for i in range(len(self.fns)):
             iscached : bool = True
             fn = self.fns[i]
@@ -127,14 +130,10 @@ class Pipeline():
                 fn_outputs_signature = fn.__annotations__['return']
                 del fn_inputs_signature['return']
 
-            if i == 0:
-                fn_args = args
-                self.__args_signatures_valid(args,fn_inputs_signature)
-            else:
-                fn_args = self.__find_providers(fn_inputs_signature)
+            fn_args = self.__find_providers(fn_inputs_signature)
 
             rtn, iscached = self.__load_from_cache_or_exec(fn_outputs_signature, i, fn_args)
-            logger.info("Loaded function " + str(i) + " from cache at " + self.base_path)
+            if iscached: logger.info("Loaded function " + str(i) + " from cache at " + self.base_path)
 
             if type(rtn) is not tuple:
                 rtn = tuple([rtn])
