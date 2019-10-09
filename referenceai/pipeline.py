@@ -7,12 +7,14 @@ class Pipeline():
     provided_types = []
     fns = []
     providers = {}
+    id = None
 
     base_path = None
 
-    def __init__(self, base_path = None):
+    def __init__(self, id, base_path = None):
+        self.id = id
         if base_path is None:
-            self.base_path = path.join(os.getcwd(), ".rai", "cache")
+            self.base_path = path.join(os.getcwd(), ".rai", "cache", self.id)
         if not path.exists(self.base_path):
             makedirs(self.base_path)
 
@@ -62,66 +64,75 @@ class Pipeline():
     def __load_from_cache_or_exec(self, fn_outputs_signature, i, args):
         rtn = None
         iscached = True
+        base_path = path.join(self.base_path, str(i))
+
+        if not path.exists(base_path):
+            makedirs(base_path)
 
         if type(fn_outputs_signature) == tuple:
             iscached = True
-            for t in fn_outputs_signature:
-                file_path = path.join(self.base_path, type(t).__name__)
+            for j in range(len(fn_outputs_signature)):
+                file_path = path.join(base_path, str(j))
                 iscached = iscached and path.exists(file_path) and path.isfile(file_path)
         else: 
-            file_path = path.join(self.base_path, type(fn_outputs_signature).__name__)
+            file_path = path.join(base_path, "0")
             iscached = path.exists(file_path) and path.isfile(file_path)
         
         if iscached:
-            if type(fn_outputs_signature) == tuple:
-                rtns = []
-                for t in fn_outputs_signature:
-                    file_path = path.join(self.base_path,type(t).__name__)
-                    rtns.append(pickle.load(open(file_path, "rb")))
-                rtn = tuple(rtns)
-            else: 
-                file_path = path.join("base_path", type(fn_outputs_signature).__name__)
-                rtn = pickle.load(open(file_path, "rb"))
-        else: 
+            if type(fn_outputs_signature) is not tuple:
+                fn_outputs_signature = tuple([fn_outputs_signature])
+            rtns = []
+            for j in range(len(fn_outputs_signature)):
+                file_path = path.join(base_path, str(j))
+                rtns.append(pickle.load(open(file_path, "rb")))
+            rtn = tuple(rtns)
+        else:
             rtn = self.fns[i](*args)
         
         return rtn, iscached
 
     # TODO: Deal with code change detection using some hashing mechanism
+    #       First, we must invalidate the cache if the parameter inputs to the start function are different
+    #       Second, we must detect if the code within the function or any classes that it depends on has changed, this is a much more difficult problem
     def run(self, *args):
+        rtn = None
         for i in range(len(self.fns)):
             iscached : bool = True
             fn = self.fns[i]
-            rtn = None
+            fn_args = None
+            fn_inputs_signature = fn.__annotations__.copy()
+            fn_outputs_signature = None
+            
+            if 'return' in fn_inputs_signature:
+                fn_outputs_signature = fn.__annotations__['return']
+                del fn_inputs_signature['return']
+
             if i == 0:
-                fn_inputs_signature = fn.__annotations__.copy()
-                fn_outputs_signature = None
-                if 'return' in fn_inputs_signature:
-                    fn_outputs_signature = fn.__annotations__['return']
-                    del fn_inputs_signature['return']
-                
+                fn_args = args
                 self.__args_signatures_valid(args,fn_inputs_signature)
-
-                rtn, iscached = self.__load_from_cache_or_exec(fn_outputs_signature,i,args)
             else:
-                # find all of providers
-                inputs = fn.__annotations__.copy()
-                outputs = None
-                if 'return' in inputs:
-                    outputs = fn.__annotations__['return']
-                    del inputs['return']
+                fn_args = self.__find_providers(fn_inputs_signature)
 
-                rtn, iscached = self.__load_from_cache_or_exec(outputs, i, self.__find_providers(inputs))
+            rtn, iscached = self.__load_from_cache_or_exec(fn_outputs_signature, i, fn_args)
 
-            if type(rtn) is tuple:
-                for r in rtn:
-                    self.providers[type(r)] = r
-                    if not iscached:
-                        file_path = path.join(self.base_path, type(r).__name__)
-                        pickle.dump(r, open(file_path, "wb"))
-            else:
-                self.providers[type(rtn)] = rtn
+            if type(rtn) is not tuple:
+                rtn = tuple([rtn])
+
+            for j in range(len(rtn)):
+                r = rtn[j]
+                self.providers[type(r)] = r
                 if not iscached:
-                    file_path = path.join(self.base_path, type(rtn).__name__)
-                    pickle.dump(rtn, open(file_path, "wb"))
+                    base_path = path.join(self.base_path, str(i))
+                    # serialized return
+                    file_path = path.join(base_path, str(j))
+                    pickle.dump(r, open(file_path, "wb"))
+                    # function hash with parameters (a colosure with all parameters already set)
+                    wfn = lambda: fn(*fn_args)
+                    file_hash = open(path.join(base_path, "obj"), "w")
+                    file_hash.write(str(hash(wfn)))
+                    file_hash.close()
+                    
+                    
+        if len(rtn) == 1:
+            rtn = rtn[0]
         return rtn

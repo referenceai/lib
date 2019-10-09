@@ -14,10 +14,12 @@ def int_string_consumer(i: int, s: str) -> str:
     return h_str
 
 def test_basic_pipeline():
-    p = Pipeline()
+    p = Pipeline("test")
 
     p.push(int_provider)
     p.push(string_provider)
     p.push(int_string_consumer)
 
-    assert(p.run(3) == ("hello world.")*3)
+    i = 3
+
+    assert(p.run(i) == ("hello world.")*i)
