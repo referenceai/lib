@@ -108,3 +108,6 @@ venv.bak/
 
 # referenceai cache and other configurations
 .rai/
+
+# tensorboad log files
+graph/
